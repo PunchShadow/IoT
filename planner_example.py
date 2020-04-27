@@ -6,6 +6,7 @@ from autoware_auto_msgs.msg import RawControlCommand
 from nav_msgs.msg import Odometry
 
 # Input a 1x3 numpy vector and get its orthogonal vector
+import math
 
 def RotateMap(vector, direction):
     rot_clo = np.array([[0, 1, 0], [-1, 0, 0], [0, 0, 1]])
@@ -16,6 +17,36 @@ def RotateMap(vector, direction):
         return np.dot(rot_clo, vector)
     else:
         return np.dot(rot_count, vector)
+
+# Find a cross b's direction (1x3)
+# Return 1 if Z is positive, else -1.
+def CrossDirection(a, b):
+    result = np.cross(a, b)
+    if result[2] < 0:
+        return -1;
+    else:
+        return 1;
+
+# Determine if a,b is the same direction by minus them
+# If a, b is the same direction, return 1, else 0
+def FindSameDirection(a, b):
+    # If either a or b is zero vector, return -1
+    if (np.linalg.norm(a) is 0) or (np.linalg.norm(b) is 0):
+        return -1;
+    else:
+        norm_a = a / np.linalg.norm(a)
+        norm_b = b / np.linalg.norm(b)
+        c = norm_a - norm_b
+        # a, b is the same direction
+        if (np.linalg.norm(c) < math.sqrt(2)):
+            return 1
+        else:
+            return 0
+# TODO
+def TransformAngle(direction, src):
+    norm_a = direction / np.linalg.norm(direction)
+    cos = np.linalg.norm(np.dot(norm_a, np.array([0,1,0])))
+    sin = np.linalg.norm(np.cross(norm_a, np.array([0,1,0])))
 
 
 
@@ -40,17 +71,18 @@ class Driver(Node):
         self.info_direction_unit_vector_old = np.array([1,0,0])
         self.info_left_point = None
         self.info_right_point = None
+        self.info_alert_distance = 8
 
     def controller_callback(self):
         #TODO
         msg = RawControlCommand()
-        msg.throttle = 100
+        msg.throttle = 10
         
+        '''
         if self.info_bounding_boxes_data_new is not None:
             for box in self.info_bounding_boxes_data_new.boxes:
-                print('central of box is at %f %f %f.' % 
-                        (box.centroid.x, box.centroid.y, box.centroid.z))
-
+                print('central of box is at %f %f %f.' % (box.centroid.x, box.centroid.y, box.centroid.z))
+        '''
         if self.info_odom_data_new is not None:
             position = self.info_odom_data_new.pose.pose.position
             print('Current pos: %f, %f, %f' % (position.x, position.y, position.z))
@@ -69,17 +101,56 @@ class Driver(Node):
             
             info_direction_counterclockwise_unit_vector = RotateMap(info_direction_unit_vector,1)
             info_direction_clockwise_unit_vector = RotateMap(info_direction_unit_vector,-1)
-            print('Current info_direction_unit_vector: %f, %f, %f' % (info_direction_unit_vector[0],info_direction_unit_vector[1],info_direction_unit_vector[2]))
+            #print('Current info_direction_unit_vector: %f, %f, %f' % (info_direction_unit_vector[0],info_direction_unit_vector[1],info_direction_unit_vector[2]))
             self.info_left_point = self.info_width_parameter * info_direction_counterclockwise_unit_vector + np.array([position_new.x, position_new.y , 0])
             self.info_right_point = self.info_width_parameter * info_direction_clockwise_unit_vector + np.array([position_new.x, position_new.y , 0])
 
+            #print("left point")
+            #print(self.info_left_point)
+            #print("right point") 
+            #print(self.info_right_point)
+
             for box in self.info_bounding_boxes_data_new.boxes:
+                # item location
                 item_position = np.array([box.centroid.x, box.centroid.y, 0]) + np.array([position_new.x, position_new.y , 0])
+                # vector of left potint to item
                 item_direction_vector_of_left_point = item_position - self.info_left_point
+                # vector of right point to item
                 item_direction_vector_of_right_point = item_position - self.info_right_point
+                #print("unit vector is:", info_direction_unit_vector)
+                #print("left vector is:", item_direction_vector_of_left_point)
+                #print("right vector is:", item_direction_vector_of_right_point)
+                #print(FindSameDirection(info_direction_unit_vector, item_direction_vector_of_right_point), FindSameDirection(info_direction_unit_vector, item_direction_vector_of_left_point))
+                
+                """
+                if FindSameDirection(info_direction_unit_vector, item_direction_vector_of_left_point) != 1:
+                    #print("inverse direction")
+                    continue
 
-            
+                if FindSameDirection(info_direction_unit_vector, item_direction_vector_of_right_point) != 1:
+                    #print("inverse direction")
+                    continue
 
+                if CrossDirection(info_direction_unit_vector, item_direction_vector_of_left_point) == 1:
+                    #print("out of left")
+                    continue
+
+                if CrossDirection(info_direction_unit_vector, item_direction_vector_of_right_point) == 0:
+                    #print("out of right")
+                    continue
+                
+                """
+
+
+                judgement = (np.array([position_new.x, position_new.y, 0]) - item_position) - info_direction_unit_vector*self.info_alert_distance
+                judgement  
+
+                print("item_position:",item_position)
+                print("item distance: %f" % (np.linalg.norm(item_position - np.array([position_new.x, position_new.y , 0]))) )
+                print("on the way")
+                if np.linalg.norm(item_position - np.array([position_new.x, position_new.y , 0])) <= self.info_alert_distance:
+                    print("collision alert")
+        
         self.pub.publish(msg)
 
     def bounding_boxes_callback(self, data):
@@ -109,3 +180,9 @@ node.destroy_node()
 rclpy.shutdown()
 
 
+
+# TODO List:
+"""
+    1. Coordination
+    2. 
+"""
