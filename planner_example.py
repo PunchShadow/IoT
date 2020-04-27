@@ -6,15 +6,17 @@ from autoware_auto_msgs.msg import RawControlCommand
 from nav_msgs.msg import Odometry
 
 # Input a 1x3 numpy vector and get its orthogonal vector
+
 def RotateMap(vector, direction):
-    rot_clo = np.array([0, 1, 0], [-1, 0, 0], [0, 0, 1])
-    rot_count = np.array([0, -1, 0], [1, 0, 0], [0, 0, 1])
+    rot_clo = np.array([[0, 1, 0], [-1, 0, 0], [0, 0, 1]])
+    rot_count = np.array([[0, -1, 0], [1, 0, 0], [0, 0, 1]])
     
     # direction = 1: clockwise
-    if direction == 1:
-        return rot_clo.dot(vector)
+    if direction is 1:
+        return np.dot(rot_clo, vector)
     else:
-        return rot_count.dot(vector)
+        return np.dot(rot_count, vector)
+
 
 
 class Driver(Node):
@@ -35,6 +37,9 @@ class Driver(Node):
         self.info_odom_data_old = None
         self.info_direction_vector = None
         self.info_width_parameter = 1.0
+        self.info_direction_unit_vector_old = np.array([1,0,0])
+        self.info_left_point = None
+        self.info_right_point = None
 
     def controller_callback(self):
         #TODO
@@ -50,14 +55,28 @@ class Driver(Node):
             position = self.info_odom_data_new.pose.pose.position
             print('Current pos: %f, %f, %f' % (position.x, position.y, position.z))
 
+        # detect and act
         if (self.info_odom_data_new is not None) and (self.info_bounding_boxes_data_new is not None) and (self.info_odom_data_old is not None) and (self.info_bounding_boxes_data_old is not None):
             position_new = self.info_odom_data_new.pose.pose.position
             position_old = self.info_odom_data_old.pose.pose.position
             self.info_direction_vector = np.array([position_new.x - position_old.x, position_new.y - position_old.y, 0])
-            info_direction_unit_vector = self.info_direction_vector / np.linalg.norm(self.info_direction_vector)
+            info_direction_unit_vector = self.info_direction_unit_vector_old
+            info_direction_vector_length = np.linalg.norm(self.info_direction_vector)
+            
+            if info_direction_vector_length != 0:
+                info_direction_unit_vector = self.info_direction_vector / np.linalg.norm(self.info_direction_vector)
+                self.info_direction_unit_vector_old = info_direction_unit_vector
+            
             info_direction_counterclockwise_unit_vector = RotateMap(info_direction_unit_vector,1)
             info_direction_clockwise_unit_vector = RotateMap(info_direction_unit_vector,-1)
+            print('Current info_direction_unit_vector: %f, %f, %f' % (info_direction_unit_vector[0],info_direction_unit_vector[1],info_direction_unit_vector[2]))
+            self.info_left_point = self.info_width_parameter * info_direction_counterclockwise_unit_vector + np.array([position_new.x, position_new.y , 0])
+            self.info_right_point = self.info_width_parameter * info_direction_clockwise_unit_vector + np.array([position_new.x, position_new.y , 0])
 
+            for box in self.info_bounding_boxes_data_new.boxes:
+                item_position = np.array([box.centroid.x, box.centroid.y, 0]) + np.array([position_new.x, position_new.y , 0])
+                item_direction_vector_of_left_point = item_position - self.info_left_point
+                item_direction_vector_of_right_point = item_position - self.info_right_point
 
             
 
