@@ -50,7 +50,28 @@ def TransformAngle(direction, src):
 
 
 def CalculateCollisionDetect(item_vector, direction_vector, width, alert_distance):
-    item_vector
+    item_vector_r = np.linalg.norm(item_vector)
+    item_vector_x = item_vector[0]
+    item_vector_y = item_vector[1]
+    item_vector_sin = item_vector_x/item_vector_r
+    item_vector_cos = item_vector_y/item_vector_r
+
+    direction_vector_r =  np.linalg.norm(direction_vector)
+    direction_vector_x = direction_vector[0]
+    direction_vector_y = direction_vector[1]
+    direction_vector_sin = direction_vector_x/direction_vector_r
+    direction_vector_cos = direction_vector_y/direction_vector_r
+    
+    side_judge = item_vector_r * (item_vector_sin * direction_vector_cos - direction_vector_sin * item_vector_cos)
+    distance_judge = item_vector_r * (item_vector_cos * direction_vector_cos + item_vector_sin * direction_vector_sin)
+
+    if side_judge * side_judge < (width/2) * (width/2) and distance_judge > 0 and distance_judge * distance_judge < alert_distance * alert_distance:
+        return 1
+    else:
+        return -1
+
+
+
     
 
 class Driver(Node):
@@ -101,58 +122,14 @@ class Driver(Node):
             if info_direction_vector_length != 0:
                 info_direction_unit_vector = self.info_direction_vector / np.linalg.norm(self.info_direction_vector)
                 self.info_direction_unit_vector_old = info_direction_unit_vector
-            
-            info_direction_counterclockwise_unit_vector = RotateMap(info_direction_unit_vector,1)
-            info_direction_clockwise_unit_vector = RotateMap(info_direction_unit_vector,-1)
-            #print('Current info_direction_unit_vector: %f, %f, %f' % (info_direction_unit_vector[0],info_direction_unit_vector[1],info_direction_unit_vector[2]))
-            self.info_left_point = self.info_width_parameter * info_direction_counterclockwise_unit_vector + np.array([position_new.x, position_new.y , 0])
-            self.info_right_point = self.info_width_parameter * info_direction_clockwise_unit_vector + np.array([position_new.x, position_new.y , 0])
-
-            #print("left point")
-            #print(self.info_left_point)
-            #print("right point") 
-            #print(self.info_right_point)
 
             for box in self.info_bounding_boxes_data_new.boxes:
-                # item location
+                # item
                 item_position = np.array([box.centroid.x, box.centroid.y, 0]) + np.array([position_new.x, position_new.y , 0])
-                # vector of left potint to item
-                item_direction_vector_of_left_point = item_position - self.info_left_point
-                # vector of right point to item
-                item_direction_vector_of_right_point = item_position - self.info_right_point
-                #print("unit vector is:", info_direction_unit_vector)
-                #print("left vector is:", item_direction_vector_of_left_point)
-                #print("right vector is:", item_direction_vector_of_right_point)
-                #print(FindSameDirection(info_direction_unit_vector, item_direction_vector_of_right_point), FindSameDirection(info_direction_unit_vector, item_direction_vector_of_left_point))
-                
-                """
-                if FindSameDirection(info_direction_unit_vector, item_direction_vector_of_left_point) != 1:
-                    #print("inverse direction")
-                    continue
-
-                if FindSameDirection(info_direction_unit_vector, item_direction_vector_of_right_point) != 1:
-                    #print("inverse direction")
-                    continue
-
-                if CrossDirection(info_direction_unit_vector, item_direction_vector_of_left_point) == 1:
-                    #print("out of left")
-                    continue
-
-                if CrossDirection(info_direction_unit_vector, item_direction_vector_of_right_point) == 0:
-                    #print("out of right")
-                    continue
-                
-                """
-
-
-                judgement = (np.array([position_new.x, position_new.y, 0]) - item_position) - info_direction_unit_vector*self.info_alert_distance
-                judgement  
-
-                print("item_position:",item_position)
-                print("item distance: %f" % (np.linalg.norm(item_position - np.array([position_new.x, position_new.y , 0]))) )
-                print("on the way")
-                if np.linalg.norm(item_position - np.array([position_new.x, position_new.y , 0])) <= self.info_alert_distance:
+                item_vector = np.array([box.centroid.x, box.centroid.y, 0])
+                if CalculateCollisionDetect(item_vector, self.info_direction_vector, self.info_width_parameter, self.info_alert_distance) == 1:
                     print("collision alert")
+                    print(item_vector)
         
         self.pub.publish(msg)
 
