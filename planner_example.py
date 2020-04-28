@@ -86,6 +86,8 @@ class Driver(Node):
         self.car_direction = None
         self.alert_distance = 5.0# The distance to take the brake
         self.car_width = 1.0
+        self.car_height = 10.0
+
     def controller_callback(self):
         #TODO
         msg = RawControlCommand()
@@ -108,6 +110,10 @@ class Driver(Node):
             
 
             for box in self.boxes_new.boxes:
+                # If the item is too high, like traffic light,etc.
+                if (box.centroid.y > self.car_height):
+                    continue
+
                 # item location
                 item_position = np.array([box.centroid.x, box.centroid.y, 0]) + np.array([position_new.x, position_new.y , 0])
                 item_vector = np.array([box.centroid.x, box.centroid.y, 0])
@@ -115,7 +121,10 @@ class Driver(Node):
                 item_othogonol = np.linalg.norm(rejection) # The distance orthogonol between item and car
                 
                 item_distance = np.linalg.norm(item_vector)
-
+                print(SameDirection(projection, self.car_direction), projection, self.car_direction)
+                print("Othogonol distance is: ", item_othogonol)
+                print("Item distance is: ", item_distance)
+                print("-----------------------------------------------------------------")
                 if (SameDirection(projection, self.car_direction)):
                     if (item_othogonol < self.car_width):
                         if (item_distance < self.alert_distance):
