@@ -21,6 +21,24 @@ def CrossDirection(a, b):
     else:
         return 1;
 
+
+# Project vector a to direction
+# Output (projection, rejection)
+def VectorProjection(a, direction):
+    cos = np.dot(direction, a) / (np.linalg.norm(direction) * np.linalg.norm(a))
+    projection = (np.dot(direction, a) / np.dot(a, a)) * direction
+    rejection = a - projection
+    return projection, rejection
+
+# If two vector's multiplication's elements are all positive,
+# two vectors are same direction
+def SameDirection(a, project_a):
+    if ((np.sign(a) * np.sign(project_a)).all() >= 0): 
+        return 1
+    else:
+        return 0
+
+
 # Determine if a,b is the same direction by minus them
 # If a, b is the same direction, return 1, else 0
 def FindSameDirection(a, b):
@@ -37,8 +55,12 @@ def FindSameDirection(a, b):
         else:
             return 0
 
-arr = np.array([-2,5,3])
-arr2 = np.array([-2, 2, 3])
-print(RotateMap(arr, 1))
-print(CrossDirection(arr, arr2))
-print(FindSameDirection(arr,arr2))
+arr = np.array([8,-2,0])
+arr2 = np.array([5, -10, 0])
+#print(RotateMap(arr, 1))
+#print(CrossDirection(arr, arr2))
+#print(FindSameDirection(arr,arr2))
+
+pro, rej = VectorProjection(arr, arr2)
+print(pro, rej)
+print(SameDirection(arr, pro))
