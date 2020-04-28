@@ -84,6 +84,7 @@ class Driver(Node):
         self.odom_old = None
         self.odom_new = None
         self.car_direction = None
+        self.car_direction_pre = None
         self.alert_distance = 5.0# The distance to take the brake
         self.car_width = 1.0
         self.car_height = 10.0
@@ -107,6 +108,11 @@ class Driver(Node):
             position_old = self.odom_old.pose.pose.position
             self.car_direction = np.array([position_new.x - position_old.x, position_new.y - position_old.y, 0])
             
+            # If the velocity is not detected then take the previous speed instead
+            if (self.car_direction.all() == 0):
+                self.car_direction = self.car_direction_pre
+            else:
+                self.car_direction_pre = self.car_direction 
             
 
             for box in self.boxes_new.boxes:
@@ -120,8 +126,8 @@ class Driver(Node):
                 projection, rejection = VectorProjection(item_vector, self.car_direction)
                 item_othogonol = np.linalg.norm(rejection) # The distance orthogonol between item and car
                 
-                item_distance = np.linalg.norm(item_vector)
-                print(SameDirection(projection, self.car_direction), projection, self.car_direction)
+                item_distance = np.linalg.norm(projection)
+                #print(SameDirection(projection, self.car_direction), projection, self.car_direction)
                 print("Othogonol distance is: ", item_othogonol)
                 print("Item distance is: ", item_distance)
                 print("-----------------------------------------------------------------")
@@ -129,8 +135,10 @@ class Driver(Node):
                     if (item_othogonol < self.car_width):
                         if (item_distance < self.alert_distance):
                             # The Hitting alert
-                            print(item_position, " item_distance:", item_distance)
-                        print(item_position, "Bypassing:", item_othogonol)
+                            #print(item_position, " item_distance:", item_distance)
+                            print("Almost hit XDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDD")
+                        print("Nearby the item !!!!!!!!!~~~~~~~~~")
+                        #print(item_position, "Bypassing:", item_othogonol)
                         # Bypassing alert
                     
 
