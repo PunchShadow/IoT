@@ -121,7 +121,7 @@ class Driver(Node):
                 item_othogonol = np.linalg.norm(rejection) # The distance orthogonol between item and car
                 
                 item_distance = np.linalg.norm(item_vector)
-                print(SameDirection(projection, self.car_direction), projection, self.car_direction)
+                print(SameDirection(projection, self.car_direction), projection, rejection)
                 print("Othogonol distance is: ", item_othogonol)
                 print("Item distance is: ", item_distance)
                 print("-----------------------------------------------------------------")
