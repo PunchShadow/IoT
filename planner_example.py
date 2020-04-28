@@ -27,6 +27,14 @@ def CrossDirection(a, b):
     else:
         return 1;
 
+# Project vector a to direction
+# Output (projection, rejection)
+def VectorProjection(a, direction):
+    cos = np.dot(direction, a) / (np.linalg.norm(direction) * np.linalg.norm(a))
+    projection = (np.dot(direction, a) / np.dot(a, a)) * direction
+    rejection = a - projection
+    return projection, rejection
+
 # Determine if a,b is the same direction by minus them
 # If a, b is the same direction, return 1, else 0
 def FindSameDirection(a, b):
@@ -62,98 +70,55 @@ class Driver(Node):
         self.create_subscription(Odometry, '/lgsvl_odom', self.odom_callback, 10)
         self.tmr = self.create_timer(1.0, self.controller_callback)
         #TODO
-        self.info = None
-        self.info_bounding_boxes_data = None
-        self.info_odom_data = None
-        self.info_bounding_boxes_data_new = None
-        self.info_bounding_boxes_data_old = None
-        self.info_odom_data_new = None
-        self.info_odom_data_old = None
-        self.info_direction_vector = None
-        self.info_width_parameter = 1.0
-        self.info_direction_unit_vector_old = np.array([1,0,0])
-        self.info_left_point = None
-        self.info_right_point = None
-        self.info_alert_distance = 8
-
+        self.position = None
+        self.boxes_old = None
+        self.boxes_new = None
+        self.odom_old = None
+        self.odom_new = None
+        self.car_direction = None
+        self.alert_distance = None# The distance to take the brake
+        self.car_width = None
     def controller_callback(self):
         #TODO
         msg = RawControlCommand()
         msg.throttle = 10
-        
         '''
-        if self.info_bounding_boxes_data_new is not None:
-            for box in self.info_bounding_boxes_data_new.boxes:
+        if self.boxes_new is not None:
+            for box in self.boxes_new.boxes:
                 print('central of box is at %f %f %f.' % (box.centroid.x, box.centroid.y, box.centroid.z))
         '''
-        if self.info_odom_data_new is not None:
-            position = self.info_odom_data_new.pose.pose.position
-            print('Current pos: %f, %f, %f' % (position.x, position.y, position.z))
+        #if self.odom_new is not None:
+            #position = self.odom_new.pose.pose.position
+            #print('Current pos: %f, %f, %f' % (position.x, position.y, position.z))
 
         # detect and act
-        if (self.info_odom_data_new is not None) and (self.info_bounding_boxes_data_new is not None) and (self.info_odom_data_old is not None) and (self.info_bounding_boxes_data_old is not None):
-            position_new = self.info_odom_data_new.pose.pose.position
-            position_old = self.info_odom_data_old.pose.pose.position
-            self.info_direction_vector = np.array([position_new.x - position_old.x, position_new.y - position_old.y, 0])
-            info_direction_unit_vector = self.info_direction_unit_vector_old
-            info_direction_vector_length = np.linalg.norm(self.info_direction_vector)
+        if (self.odom_new is not None) and (self.boxes_new is not None) and (self.odom_old is not None) and (self.boxes_old is not None):
+            position_new = self.odom_new.pose.pose.position
+            position_old = self.odom_old.pose.pose.position
+            self.car_direction = np.array([position_new.x - position_old.x, position_new.y - position_old.y, 0])
             
-            if info_direction_vector_length != 0:
-                info_direction_unit_vector = self.info_direction_vector / np.linalg.norm(self.info_direction_vector)
-                self.info_direction_unit_vector_old = info_direction_unit_vector
             
-            info_direction_counterclockwise_unit_vector = RotateMap(info_direction_unit_vector,1)
-            info_direction_clockwise_unit_vector = RotateMap(info_direction_unit_vector,-1)
-            #print('Current info_direction_unit_vector: %f, %f, %f' % (info_direction_unit_vector[0],info_direction_unit_vector[1],info_direction_unit_vector[2]))
-            self.info_left_point = self.info_width_parameter * info_direction_counterclockwise_unit_vector + np.array([position_new.x, position_new.y , 0])
-            self.info_right_point = self.info_width_parameter * info_direction_clockwise_unit_vector + np.array([position_new.x, position_new.y , 0])
 
-            #print("left point")
-            #print(self.info_left_point)
-            #print("right point") 
-            #print(self.info_right_point)
-
-            for box in self.info_bounding_boxes_data_new.boxes:
+            for box in self.boxes_new.boxes:
                 # item location
                 item_position = np.array([box.centroid.x, box.centroid.y, 0]) + np.array([position_new.x, position_new.y , 0])
-                # vector of left potint to item
-                item_direction_vector_of_left_point = item_position - self.info_left_point
-                # vector of right point to item
-                item_direction_vector_of_right_point = item_position - self.info_right_point
-                #print("unit vector is:", info_direction_unit_vector)
-                #print("left vector is:", item_direction_vector_of_left_point)
-                #print("right vector is:", item_direction_vector_of_right_point)
-                #print(FindSameDirection(info_direction_unit_vector, item_direction_vector_of_right_point), FindSameDirection(info_direction_unit_vector, item_direction_vector_of_left_point))
+                item_vector = np.array([box.centroid.x, box.centroid.y, 0])
+                projection, rejection = VectorProjection(item_vector, self.car_direction)
+                item_othogonol = np.linalg.norm(rejection) # The distance orthogonol between item and car
                 
-                """
-                if FindSameDirection(info_direction_unit_vector, item_direction_vector_of_left_point) != 1:
-                    #print("inverse direction")
-                    continue
+                item_distance = np.linalg.norm(item_vector)
 
-                if FindSameDirection(info_direction_unit_vector, item_direction_vector_of_right_point) != 1:
-                    #print("inverse direction")
-                    continue
-
-                if CrossDirection(info_direction_unit_vector, item_direction_vector_of_left_point) == 1:
-                    #print("out of left")
-                    continue
-
-                if CrossDirection(info_direction_unit_vector, item_direction_vector_of_right_point) == 0:
-                    #print("out of right")
-                    continue
-                
-                """
+                if (SameDirection(projection, self.car_direction)):
+                    if (item_othogonol < Car width):
+                        if (item_distance < self.alert_distance):
+                            # The Hitting alert
+                            print(item_position, " item_distance:", item_distance)
+                        print(item_position, "Bypassing:", item_othogonol)
+                        # Bypassing alert
+                    
 
 
-                judgement = (np.array([position_new.x, position_new.y, 0]) - item_position) - info_direction_unit_vector*self.info_alert_distance
-                judgement  
 
-                print("item_position:",item_position)
-                print("item distance: %f" % (np.linalg.norm(item_position - np.array([position_new.x, position_new.y , 0]))) )
-                print("on the way")
-                if np.linalg.norm(item_position - np.array([position_new.x, position_new.y , 0])) <= self.info_alert_distance:
-                    print("collision alert")
-        
         self.pub.publish(msg)
 
     def bounding_boxes_callback(self, data):
@@ -162,15 +127,15 @@ class Driver(Node):
         #    print('central of box is at %f %f %f.' % 
         #            (box.centroid.x, box.centroid.y, box.centroid.z))
         #TODO
-        self.info_bounding_boxes_data_old = self.info_bounding_boxes_data_new
-        self.info_bounding_boxes_data_new = data
+        self.boxes_old = self.boxes_new
+        self.boxes_new = data
 
     def odom_callback(self, data):
         #position = data.pose.pose.position
         #print('Current pos: %f, %f, %f' % (position.x, position.y, position.z))
         #TODO
-        self.info_odom_data_old = self.info_odom_data_new
-        self.info_odom_data_new = data
+        self.odom_old = self.odom_new
+        self.odom_new = data
 
 rclpy.init()
 node = Driver()
