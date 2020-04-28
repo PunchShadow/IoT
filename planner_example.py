@@ -49,6 +49,9 @@ def TransformAngle(direction, src):
     sin = np.linalg.norm(np.cross(norm_a, np.array([0,1,0])))
 
 
+def CalculateCollisionDetect(item_vector, direction_vector, width, alert_distance):
+    item_vector
+    
 
 class Driver(Node):
 
