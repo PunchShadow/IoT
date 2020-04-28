@@ -55,7 +55,7 @@ def CalculateCollisionDetect(item_vector, direction_vector, width, alert_distanc
     item_vector_y = item_vector[1]
     item_vector_sin = item_vector_x/item_vector_r
     item_vector_cos = item_vector_y/item_vector_r
-
+ 
     direction_vector_r =  np.linalg.norm(direction_vector)
     direction_vector_x = direction_vector[0]
     direction_vector_y = direction_vector[1]
@@ -65,7 +65,7 @@ def CalculateCollisionDetect(item_vector, direction_vector, width, alert_distanc
     side_judge = item_vector_r * (item_vector_sin * direction_vector_cos - direction_vector_sin * item_vector_cos)
     distance_judge = item_vector_r * (item_vector_cos * direction_vector_cos + item_vector_sin * direction_vector_sin)
 
-
+    print("item_vector: ",item_vector, "direction_vector: ", direction_vector)
     print("side_judge: %f distance_judge: %f" % (side_judge, distance_judge))
 
     if (side_judge * side_judge < (width/2) * (width/2)) and (distance_judge > 0) and (distance_judge * distance_judge < alert_distance * alert_distance):
@@ -94,6 +94,7 @@ class Driver(Node):
         self.info_odom_data_new = None
         self.info_odom_data_old = None
         self.info_direction_vector = None
+        self.info_direction_vector_old = None
         self.info_width_parameter = 0.5
         self.info_direction_unit_vector_old = np.array([1,0,0])
         self.info_left_point = None
