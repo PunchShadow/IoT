@@ -59,6 +59,14 @@ def TransformAngle(direction, src):
 
 def CalculateCollisionDetect(item_vector, direction_vector, width, alert_distance):
     item_vector
+
+# If two vector's multiplication's elements are all positive,
+# two vectors are same direction
+def SameDirection(a, project_a):
+    if ((np.sign(a) * np.sign(project_a)).all() >= 0): 
+        return 1
+    else:
+        return 0
     
 
 class Driver(Node):
@@ -76,8 +84,8 @@ class Driver(Node):
         self.odom_old = None
         self.odom_new = None
         self.car_direction = None
-        self.alert_distance = None# The distance to take the brake
-        self.car_width = None
+        self.alert_distance = 5.0# The distance to take the brake
+        self.car_width = 1.0
     def controller_callback(self):
         #TODO
         msg = RawControlCommand()
@@ -109,7 +117,7 @@ class Driver(Node):
                 item_distance = np.linalg.norm(item_vector)
 
                 if (SameDirection(projection, self.car_direction)):
-                    if (item_othogonol < Car width):
+                    if (item_othogonol < self.car_width):
                         if (item_distance < self.alert_distance):
                             # The Hitting alert
                             print(item_position, " item_distance:", item_distance)
