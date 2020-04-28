@@ -65,7 +65,10 @@ def CalculateCollisionDetect(item_vector, direction_vector, width, alert_distanc
     side_judge = item_vector_r * (item_vector_sin * direction_vector_cos - direction_vector_sin * item_vector_cos)
     distance_judge = item_vector_r * (item_vector_cos * direction_vector_cos + item_vector_sin * direction_vector_sin)
 
-    if side_judge * side_judge < (width/2) * (width/2) and distance_judge > 0 and distance_judge * distance_judge < alert_distance * alert_distance:
+
+    print("side_judge: %f distance_judge: %f" % (side_judge, distance_judge))
+
+    if (side_judge * side_judge < (width/2) * (width/2)) and (distance_judge > 0) and (distance_judge * distance_judge < alert_distance * alert_distance):
         return 1
     else:
         return -1
@@ -91,11 +94,12 @@ class Driver(Node):
         self.info_odom_data_new = None
         self.info_odom_data_old = None
         self.info_direction_vector = None
-        self.info_width_parameter = 1.0
+        self.info_width_parameter = 0.5
         self.info_direction_unit_vector_old = np.array([1,0,0])
         self.info_left_point = None
         self.info_right_point = None
-        self.info_alert_distance = 8
+        self.info_alert_distance = 5
+        self.info_current_position = None
 
     def controller_callback(self):
         #TODO
@@ -109,7 +113,8 @@ class Driver(Node):
         '''
         if self.info_odom_data_new is not None:
             position = self.info_odom_data_new.pose.pose.position
-            print('Current pos: %f, %f, %f' % (position.x, position.y, position.z))
+            self.info_current_position = np.array([position.x,position.y,position.z])
+            print('Current pos:',self.info_current_position)
 
         # detect and act
         if (self.info_odom_data_new is not None) and (self.info_bounding_boxes_data_new is not None) and (self.info_odom_data_old is not None) and (self.info_bounding_boxes_data_old is not None):
@@ -127,6 +132,7 @@ class Driver(Node):
                 # item
                 item_position = np.array([box.centroid.x, box.centroid.y, 0]) + np.array([position_new.x, position_new.y , 0])
                 item_vector = np.array([box.centroid.x, box.centroid.y, 0])
+                print("item",item_position-self.info_current_position)
                 if CalculateCollisionDetect(item_vector, self.info_direction_vector, self.info_width_parameter, self.info_alert_distance) == 1:
                     print("collision alert")
                     print(item_vector)
